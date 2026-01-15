@@ -1,0 +1,45 @@
+# Ignorar entorno virtual
+venv/
+.venv/
+
+# Archivos de compilación de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de configuración de IDEs (VS Code, PyCharm, etc.)
+.vscode/
+.idea/
+
+# Archivos de entorno (variables de configuración sensibles)
+.env
+
+# Archivos de bases de datos locales (si estás usando SQLite o similares)
+*.db
+*.sqlite3
+
+# Archivos generados por el sistema operativo
+.DS_Store   # macOS
+Thumbs.db   # Windows
+
+# Archivos de logs
+*.log
+
+# Otros archivos generados por el sistema
+*.bak
+*.swp
+
+# Archivos de documentacion generados
+estructura_directorio.txt
+Plan de Despliegue.txt
+
+# Plantilla commit
+plantilla_commit.txt
+
+# Carpeta de ayudas y recursos
+ayudas_y_recursos/
+
+# Ignorar checkpoints de Jupyter
+.ipynb_checkpoints/
+.cache.sqlite
