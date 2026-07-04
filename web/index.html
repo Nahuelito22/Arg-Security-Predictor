@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BA Crime Predictor — Riesgo delictivo por barrio (CABA)</title>
+  <meta name="description" content="MVP de predicción de incidentes delictivos por barrio, día y franja horaria en la Ciudad de Buenos Aires. Datos abiertos 2022–2025.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    <h1>BA Crime Predictor</h1>
+    <span class="badge">MVP</span>
+  </div>
+  <div class="topbar-meta" id="topbar-meta">Cargando datos…</div>
+</header>
+
+<main class="layout">
+  <section class="map-wrap">
+    <div id="map"></div>
+    <div class="map-overlay selection-pill" id="selection-pill"></div>
+    <div class="map-overlay legend" id="legend">
+      <div class="legend-title" id="legend-title">Riesgo esperado</div>
+      <div class="legend-bar"></div>
+      <div class="legend-labels"><span>bajo</span><span id="legend-max">alto</span></div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="card controls">
+      <div class="control-label">Día de la semana</div>
+      <div class="btn-row" id="dow-buttons"></div>
+      <div class="control-label">Franja horaria</div>
+      <div class="btn-row" id="band-buttons"></div>
+      <label class="toggle">
+        <input type="checkbox" id="normalize" checked>
+        <span>Normalizar por km² (densidad de riesgo)</span>
+      </label>
+    </div>
+
+    <div class="card detail" id="barrio-detail">
+      <div class="detail-empty">
+        <div class="detail-empty-icon">🗺️</div>
+        <p>Hacé clic en un barrio del mapa para ver su detalle: incidentes esperados, índice de riesgo, tipos de delito predominantes y distribución horaria.</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<section class="section">
+  <h2>Tendencia y pronóstico de la ciudad</h2>
+  <p class="section-sub">Incidentes diarios totales en CABA: últimos 60 días observados y pronóstico a 14 días del modelo de forecasting.</p>
+  <div class="card chart-card"><canvas id="citywide-chart" height="90"></canvas></div>
+</section>
+
+<section class="section">
+  <h2>¿Qué tan bueno es el modelo? <span class="muted">(evaluación honesta)</span></h2>
+  <p class="section-sub">Cada modelo se evalúa contra un baseline ingenuo con split temporal (el test son datos futuros que el modelo nunca vio). Si un modelo no supera al baseline, no sirve — acá están los números reales.</p>
+  <div class="metrics-grid" id="metrics-grid"></div>
+</section>
+
+<section class="section methodology">
+  <h2>Metodología</h2>
+  <div class="method-grid">
+    <div class="card">
+      <h3>📊 Datos</h3>
+      <p><strong>576.410 incidentes</strong> (2022–2025) del dataset oficial de delitos de BA Data (Ministerio de Justicia y Seguridad, GCBA), con barrio, fecha, franja horaria, tipo y uso de armas. Se descartó el 2,11&nbsp;% de filas por falta de barrio o franja válida.</p>
+    </div>
+    <div class="card">
+      <h3>🧠 Modelos</h3>
+      <p><strong>Modelo espacial:</strong> Gradient Boosting con pérdida de Poisson que predice el conteo semanal por slot (barrio × día × franja de 4h, grid de 2.016 slots con ceros explícitos), usando calendario, tendencia y lags. <strong>Modelo temporal:</strong> forecast diario citywide con lags y estacionalidad semanal/anual.</p>
+    </div>
+    <div class="card">
+      <h3>📏 Evaluación</h3>
+      <p>Split estrictamente temporal: se entrena con el pasado y se evalúa en las últimas 26 semanas (espacial) y 90 días (temporal). Baselines: media histórica por slot y naive estacional. Métricas: MAE y RMSE, siempre comparadas contra el baseline.</p>
+    </div>
+    <div class="card ethics">
+      <h3>⚖️ Limitaciones y ética</h3>
+      <p>Los datos son <strong>denuncias registradas</strong>, no delitos reales: existe subregistro y sesgo de denuncia que varía por zona y tipo de delito. Las predicciones son agregadas a nivel barrio con fines de análisis y planificación; <strong>no</strong> son una herramienta de vigilancia ni perfilamiento individual. Un índice alto no define a un barrio ni a su gente.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>Proyecto educativo de portfolio — no es una herramienta operativa de seguridad.</p>
+  <p>Fuente: <a href="https://data.buenosaires.gob.ar/dataset/delitos" target="_blank" rel="noopener">BA Data — Delitos (GCBA)</a> · Código: <a href="https://github.com/Nahuelito22/Arg-Security-Predictor" target="_blank" rel="noopener">GitHub</a> · Mapa © <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a> / OpenStreetMap</p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

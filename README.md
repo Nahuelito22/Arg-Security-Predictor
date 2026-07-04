@@ -1,86 +1,90 @@
-# Arg-Security Predictor: Plataforma Federal de Inteligencia Criminal
+# Arg-Security Predictor
 
-> **Sistema integral de análisis, clustering y predicción de seguridad ciudadana para Mendoza, Córdoba y Buenos Aires, potenciado por Deep Learning.**
+> **MVP funcionando:** mapa interactivo de riesgo delictivo por barrio, día y franja horaria para la Ciudad de Buenos Aires, con modelos de Machine Learning evaluados honestamente sobre 576.410 incidentes reales (2022–2025).
 
-## Resumen del Proyecto
-Este proyecto tiene como objetivo desarrollar una solución de Policía Predictiva basada en datos. A diferencia de los enfoques tradicionales que solo muestran "dónde robaron ayer", nuestra plataforma busca responder preguntas complejas mediante Machine Learning: 
-* ¿Qué probabilidad de incidente tiene esta esquina un viernes por la noche? 
+![status](https://img.shields.io/badge/estado-MVP%20v0.1-f59e0b) ![python](https://img.shields.io/badge/python-3.10%2B-3776AB) ![license](https://img.shields.io/badge/licencia-MIT-green)
 
-* ¿Cómo influyen factores externos (clima, iluminación, festividades) en la tasa delictiva?
+## ¿Qué hace?
 
-## Objetivos Estratégicos
-1.  **Federación de Datos:** Homologar estructuras de datos dispares de las tres provincias más pobladas de Argentina.
-2.  **Modelado Predictivo:** Anticipar la demanda de seguridad (cantidad de incidentes) y el riesgo específico por zona.
-3.  **Detección de Patrones Ocultos:** Descubrir correlaciones no obvias (ej: relación entre fases lunares/clima y tipos de delito).
-4.  **Ética del Dato:** Implementar algoritmos que mitiguen el sesgo de "zona roja" mediante un enfoque de corredores seguros.
+La página (`web/`) responde la pregunta del proyecto original — *"¿qué probabilidad de incidente tiene esta zona un viernes a la noche?"* — con datos reales:
 
+- 🗺️ **Mapa coroplético de CABA** (48 barrios): riesgo esperado para cualquier combinación de día × franja de 4h, normalizable por km². Abre mostrando el riesgo de *ahora*.
+- 🎯 **Índice de riesgo 0–100 por slot** (percentil entre los 2.016 slots barrio×día×franja de la ciudad) + incidentes esperados por semana.
+- 🔍 **Detalle por barrio**: tipos de delito predominantes, % con uso de arma, distribución horaria de los últimos 12 meses.
+- 📈 **Forecast de la ciudad**: pronóstico a 14 días de incidentes diarios totales.
+- 📏 **Métricas publicadas**: cada modelo se compara contra un baseline ingenuo con split temporal — los números reales están en la página, incluidas las mejoras modestas.
 
+## Resultados (test = datos futuros nunca vistos por el modelo)
 
-## Arquitectura del Pipeline de Datos
+| Modelo | Baseline | MAE | RMSE | Mejora MAE |
+|---|---|---|---|---|
+| **Espacial** — conteo semanal por barrio×día×franja | Media histórica del slot | 0.898 → **0.866** | 1.363 → **1.339** | −3.6% |
+| **Temporal** — incidentes diarios CABA | Naive estacional (t−7) | 48.81 → **40.38** | 72.23 → **55.59** | −17.3% |
 
-### 1. Ingesta y Enriquecimiento (ETL Avanzado)
-No solo consumimos datos de delitos, sino que los enriquecemos para dar contexto al modelo (Feature Engineering).
+Ambos son Gradient Boosting con **pérdida de Poisson** (los delitos son conteos, no valores continuos), con features de calendario, tendencia y lags. Split estrictamente temporal: 26 semanas / 90 días finales como test. El detalle de decisiones está en [PLAN.md](PLAN.md).
 
-* **Fuentes Primarias (El "Qué"):**
-    * *SNIC (Sistema Nacional de Información Criminal):* Estadísticas macro para validación de tendencias.
-    * *Portales de Datos Abiertos (BA Data, Gobierno de CBA, Mendoza):* Datasets de contravenciones y llamadas al 911 (si disponibles).
-    * *Scraping de Noticias (NLP):* Bot personalizado para extraer incidentes geolocalizados desde medios digitales (Mdzol, La Voz, Clarín) usando reconocimiento de entidades (NER).
+## Cómo correrlo
 
-* **Fuentes Secundarias (El "Contexto" - Variables Exógenas):**
-    * *APIs Meteorológicas:* Temperatura, precipitaciones y nubosidad histórica (¿Aumenta el robo en días de lluvia?).
-    * *Datos de Calendario:* Feriados, fechas de cobro (bancos), fases lunares (iluminación nocturna natural).
-    * *Infraestructura:* Ubicación de comisarías, paradas de colectivo y cámaras de seguridad.
+```bash
+git clone https://github.com/Nahuelito22/Arg-Security-Predictor.git
+cd Arg-Security-Predictor
+python -m venv .venv && .venv\Scripts\activate    # Windows (en Linux: source .venv/bin/activate)
+pip install -r requirements.txt
 
-* **Procesamiento:**
-    * **Geocoding Inverso:** Transformación de direcciones textuales ("Av. San Martín y Las Heras") a coordenadas (Lat/Long) usando *Nominatim/OpenStreetMap*.
-    * **Taxonomía Unificada:** Mapeo de categorías provinciales a un estándar único (ej: "Arrebato" y "Sustracción en vía pública" -> `ROBO_VIA_PUBLICA`).
+# 1) Descargar datos abiertos a data/raw/  (delitos_2022.csv ... delitos_2025.csv + barrios.geojson)
+#    https://cdn.buenosaires.gob.ar/datosabiertos/datasets/ministerio-de-justicia-y-seguridad/delitos/delitos_2022.csv  (ídem 2023/2024/2025)
+#    https://cdn.buenosaires.gob.ar/datosabiertos/datasets/ministerio-de-educacion/barrios/barrios.geojson
 
----
+# 2) Pipeline completo
+python src/prepare.py     # limpieza + control de calidad + agregaciones (~40 s)
+python src/train.py       # entrenamiento + evaluación + export a web/data/ (~2 min)
 
-### 2. Modelado y Algoritmos (Core Intelligence)
-Implementaremos cuatro módulos analíticos para cubrir distintas necesidades:
+# 3) Ver la página
+python -m http.server 8765 --directory web
+# → http://localhost:8765
+```
 
-#### A. Análisis Espacial (Clustering)
-* **Algoritmo:** **DBSCAN** (Density-Based Spatial Clustering).
-* **Objetivo:** Identificar **Hotspots Dinámicos**. A diferencia de K-Means, DBSCAN detecta zonas de forma irregular y descarta el "ruido" (delitos aislados que no constituyen tendencia), permitiendo a las fuerzas focalizar patrullaje en clusters reales de alta densidad.
+## Estructura
 
-#### B. Predicción Temporal (Forecasting)
-* **Algoritmo:** **LSTM** (Long Short-Term Memory) / **Prophet**.
-* **Objetivo:** Predecir la **Carga Delictiva**. Estimar el volumen de incidentes esperados para la próxima semana/mes. Esto permite la planificación eficiente de recursos humanos (turnos policiales).
+```
+├── data/raw/          CSVs oficiales de BA Data (no se commitean, ~90 MB)
+├── data/processed/    incidentes limpios + agregaciones (regenerable)
+├── src/
+│   ├── prepare.py     ETL: limpieza, calidad, slots semanales, perfiles de barrio, geojson
+│   └── train.py       modelos A (espacial) y B (temporal) + métricas + export JSON
+└── web/               página estática (Leaflet + Chart.js, sin backend)
+    └── data/          artefactos que consume la página (sí se commitean)
+```
 
-#### C. Scoring de Riesgo (Clasificación/Regresión)
-* **Algoritmo:** **XGBoost** o **Random Forest**.
-* **Objetivo:** Calcular el **Índice de Seguridad (0-100)**.
-    * *Input:* Coordenadas, Día de la semana, Hora, Clima, Cercanía a comisaría.
-    * *Output:* Probabilidad de ocurrencia de un incidente en ese momento y lugar específico.
-    * *Uso:* Permitir al usuario consultar: "¿Qué tan segura es esta zona un sábado a las 3 AM?".
+## Datos
 
-#### D. Detección de Anomalías (Unsupervised)
-* **Algoritmo:** **Isolation Forest**.
-* **Objetivo:** Detectar **Cambios de Patrón**. El sistema alertará cuando una zona tradicionalmente tranquila experimente un pico inusual de actividad (outliers), lo cual suele indicar una nueva modalidad delictiva o una banda operando temporalmente.
+**Fuente:** [Dataset de delitos — BA Data](https://data.buenosaires.gob.ar/dataset/delitos) (Ministerio de Justicia y Seguridad, GCBA). 588.856 filas crudas 2022–2025; se usa el 97,9% (se descartan filas sin barrio o sin franja horaria válida, reportado en `data/processed/meta.json`).
 
----
+**Por qué solo CABA (por ahora):** es la única jurisdicción argentina que publica datos a nivel incidente con fecha, franja, barrio y tipo. El plan original contemplaba Mendoza y Córdoba; se federarán si aparecen datasets granulares equivalentes (ver backlog en PLAN.md).
 
-### 3. Stack Tecnológico
-* **Lenguaje:** Python 3.10+.
-* **Data Engineering:** Pandas, GeoPandas, SQLAlchemy.
-* **NLP & Scraping:** BeautifulSoup, Spacy (para extraer direcciones de noticias).
-* **Machine Learning:** Scikit-Learn (Random Forest, DBSCAN, Isolation Forest), TensorFlow/Keras (LSTM), XGBoost.
-* **Visualización:** Folium (Mapas de calor interactivos), Seaborn, Plotly.
+## ⚖️ Limitaciones y ética
 
-### 4. Métricas de Evaluación
-Para asegurar la fiabilidad de los modelos, utilizaremos:
-* *Para Clustering:* **Silhouette Score** (cohesión de los clusters).
-* *Para Predicción (Regresión):* **RMSE** (Error Cuadrático Medio) y **MAE**.
-* *Para Clasificación:* **F1-Score** y **Matriz de Confusión** (crucial para equilibrar falsos positivos/negativos).
+- Los datos son **denuncias registradas**, no delitos ocurridos: hay subregistro y el sesgo de denuncia varía por zona y tipo de delito.
+- Las predicciones son **agregadas a nivel barrio** con fines de análisis y planificación. Esto **no es** una herramienta de vigilancia, patrullaje dirigido ni perfilamiento individual.
+- Un índice de riesgo alto describe un *slot espacio-temporal*, no define a un barrio ni a su gente.
+- Proyecto educativo de portfolio, sin uso operativo.
 
----
+## Visión original (roadmap completo)
 
-## 📅 Roadmap del Proyecto
-1. Definición del Diccionario de Datos unificado y construcción de scrapers.
-2. EDA (Análisis Exploratorio) y generación de mapas de calor estáticos.
-3. Entrenamiento del modelo espacial (DBSCAN) y temporal (LSTM).
-4. Desarrollo del modelo de Scoring de Riesgo (XGBoost) con variables climáticas.
-5. Integración y Dashboard final.
+<details>
+<summary>Ver la propuesta federal completa (Mendoza + Córdoba + BA, 4 módulos analíticos)</summary>
 
----
+El plan original del proyecto contempla: federación de datos de las 3 provincias más pobladas,
+análisis espacial con DBSCAN (hotspots dinámicos), forecasting con LSTM/Prophet, scoring de
+riesgo con XGBoost enriquecido con clima/calendario/infraestructura, y detección de anomalías
+con Isolation Forest. El estado de cada punto y las decisiones de simplificación del MVP están
+documentados en [PLAN.md](PLAN.md).
+
+</details>
+
+## Autores
+
+- [Nahuelito22](https://github.com/Nahuelito22) — idea original y arquitectura del proyecto
+- Joaquín Rao — MVP: pipeline de datos, modelos y dashboard
+
+Licencia MIT.

@@ -43,3 +43,8 @@ ayudas_y_recursos/
 # Ignorar checkpoints de Jupyter
 .ipynb_checkpoints/
 .cache.sqlite
+
+# Datos crudos y procesados (se regeneran con src/prepare.py; ~90MB)
+data/raw/
+data/processed/
+# web/data/ SI se commitea: son los artefactos que consume la pagina

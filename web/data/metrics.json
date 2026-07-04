@@ -1,0 +1,37 @@
+{
+ "modelo_slots": {
+  "train_semanas": 175,
+  "test_semanas": 26,
+  "test_desde": "2025-06-30",
+  "n_slots": 2016,
+  "baseline_mae": 0.8978,
+  "baseline_rmse": 1.3633,
+  "model_mae": 0.8658,
+  "model_rmse": 1.3389,
+  "mejora_mae_pct": 3.56,
+  "mejora_rmse_pct": 1.79
+ },
+ "modelo_diario": {
+  "train_dias": 1343,
+  "test_dias": 90,
+  "test_desde": "2025-10-03",
+  "baseline_mae": 48.81,
+  "baseline_rmse": 72.23,
+  "model_mae": 40.38,
+  "model_rmse": 55.59,
+  "mejora_mae_pct": 17.27,
+  "mejora_rmse_pct": 23.04
+ },
+ "calidad_datos": {
+  "filas_totales": 588856,
+  "sin_fecha": 0,
+  "sin_barrio": 12256,
+  "sin_franja_valida": 249,
+  "filas_usadas": 576410,
+  "pct_descartado": 2.11
+ },
+ "rango_datos": {
+  "desde": "2022-01-01",
+  "hasta": "2025-12-31"
+ }
+}
