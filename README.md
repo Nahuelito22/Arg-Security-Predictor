@@ -1,27 +1,28 @@
 # Arg-Security Predictor
 
-> **MVP funcionando:** mapa interactivo de riesgo delictivo por barrio, día y franja horaria para la Ciudad de Buenos Aires, con modelos de Machine Learning evaluados honestamente sobre 576.410 incidentes reales (2022–2025).
+> **Plataforma funcionando:** mapa interactivo de riesgo delictivo por barrio y comuna, día y franja horaria para la Ciudad de Buenos Aires, con modelos de Machine Learning evaluados honestamente sobre 576.410 incidentes reales (2022–2025), alertas de cambio de patrón y herramientas de planificación operativa.
 
-![status](https://img.shields.io/badge/estado-MVP%20v0.1-f59e0b) ![python](https://img.shields.io/badge/python-3.10%2B-3776AB) ![license](https://img.shields.io/badge/licencia-MIT-green)
+![status](https://img.shields.io/badge/estado-v0.2-f59e0b) ![python](https://img.shields.io/badge/python-3.10%2B-3776AB) ![license](https://img.shields.io/badge/licencia-MIT-green)
 
 ## ¿Qué hace?
 
-La página (`web/`) responde la pregunta del proyecto original — *"¿qué probabilidad de incidente tiene esta zona un viernes a la noche?"* — con datos reales:
+La página (`web/`) responde la pregunta del proyecto original — *"¿qué probabilidad de incidente tiene esta zona un viernes a la noche?"* — con datos reales, y suma las herramientas que un planificador operativo usaría de verdad:
 
-- 🗺️ **Mapa coroplético de CABA** (48 barrios): riesgo esperado para cualquier combinación de día × franja de 4h, normalizable por km². Abre mostrando el riesgo de *ahora*.
-- 🎯 **Índice de riesgo 0–100 por slot** (percentil entre los 2.016 slots barrio×día×franja de la ciudad) + incidentes esperados por semana.
-- 🔍 **Detalle por barrio**: tipos de delito predominantes, % con uso de arma, distribución horaria de los últimos 12 meses.
-- 📈 **Forecast de la ciudad**: pronóstico a 14 días de incidentes diarios totales.
+- 🗺️ **Mapa coroplético de CABA** por **barrio (48) o comuna (15)** — la comuna es la unidad territorial de las Comisarías Vecinales. Riesgo esperado para cualquier día × franja de 4h, filtrable por **tipo de delito** y normalizable por km². Abre mostrando el riesgo de *ahora*.
+- 🎯 **Índice de riesgo 0–100 por slot** (percentil entre los 2.016 slots barrio×día×franja) + incidentes esperados por semana + **huella semanal** de cada zona (heatmap 7×6 clickeable).
+- 🚨 **Alertas de cambio de patrón**: barrios cuya actividad de las últimas 4 semanas se desvía significativamente de sus 12 previas (test de Poisson, |z| ≥ 2) — señal temprana de nuevas modalidades. Con sparklines de 16 semanas.
+- 📋 **Planificación operativa**: slot pico por zona (top 10), **export CSV** de los 2.016 slots y **reporte imprimible**.
+- 📈 **Forecast de la ciudad** a 14 días con **banda de incertidumbre calibrada por conformal prediction** (cobertura real medida: 78,9% vs objetivo 80%).
 - 📏 **Métricas publicadas**: cada modelo se compara contra un baseline ingenuo con split temporal — los números reales están en la página, incluidas las mejoras modestas.
 
 ## Resultados (test = datos futuros nunca vistos por el modelo)
 
 | Modelo | Baseline | MAE | RMSE | Mejora MAE |
 |---|---|---|---|---|
-| **Espacial** — conteo semanal por barrio×día×franja | Media histórica del slot | 0.898 → **0.866** | 1.363 → **1.339** | −3.6% |
-| **Temporal** — incidentes diarios CABA | Naive estacional (t−7) | 48.81 → **40.38** | 72.23 → **55.59** | −17.3% |
+| **Espacial** — conteo semanal por barrio×día×franja | Media histórica del slot | 0.898 → **0.863** | 1.363 → **1.337** | −3.9% |
+| **Temporal** — incidentes diarios CABA | Naive estacional (t−7) | 48.81 → **33.57** | 72.23 → **49.62** | −31.2% |
 
-Ambos son Gradient Boosting con **pérdida de Poisson** (los delitos son conteos, no valores continuos), con features de calendario, tendencia y lags. Split estrictamente temporal: 26 semanas / 90 días finales como test. El detalle de decisiones está en [PLAN.md](PLAN.md).
+Ambos son Gradient Boosting con **pérdida de Poisson** (los delitos son conteos, no valores continuos), con calendario, tendencia, lags, contexto de barrio y **feriados nacionales** (solo agregar feriados bajó el MAE diario de 40.4 a 33.6). Banda q10–q90 calibrada con **CQR (Conformalized Quantile Regression)**: cobertura real en test 78,9% (sin calibrar: 62,2%). Split estrictamente temporal: 26 semanas / 90 días finales como test. Los valores exactos de cada corrida quedan en `web/data/metrics.json`; el detalle de decisiones está en [PLAN.md](PLAN.md).
 
 ## Cómo correrlo
 

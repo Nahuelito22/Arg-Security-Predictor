@@ -193,6 +193,95 @@ a:hover { text-decoration: underline; }
   text-align: center; font-size: .75rem; color: var(--text-dim);
 }
 
+/* ---------- Controles v0.2 ---------- */
+.btn-row.chips button { min-width: 58px; }
+#zone-select {
+  width: 100%; padding: 8px 10px;
+  background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--card-border); border-radius: 8px;
+  font-family: inherit; font-size: .78rem;
+}
+
+/* ---------- Planificación operativa ---------- */
+.section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.ops-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+.action-btn {
+  background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--card-border); border-radius: 8px;
+  padding: 8px 14px; font-size: .78rem; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: all .15s;
+}
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ops-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
+@media (max-width: 980px) { .ops-grid { grid-template-columns: 1fr; } }
+.ops-grid h3 { font-size: .95rem; margin-bottom: 2px; }
+.card-sub { font-size: .74rem; color: var(--text-dim); margin-bottom: 12px; }
+
+.ops-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.ops-table th, .ops-table td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--card-border); }
+.ops-table th { color: var(--text-dim); font-size: .66rem; text-transform: uppercase; letter-spacing: .8px; }
+.ops-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ops-table th:nth-child(n+5) { text-align: right; }
+.slot-row { cursor: pointer; transition: background .12s; }
+.slot-row:hover { background: var(--bg-soft); }
+.zone-cell { font-weight: 600; }
+
+.alert-group-label {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-dim); margin: 10px 0 6px;
+}
+.alert-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 8px 10px; border: 1px solid var(--card-border); border-radius: 10px;
+  margin-bottom: 6px; cursor: pointer; transition: border-color .15s;
+}
+.alert-row:hover { border-color: var(--accent); }
+.alert-main { display: flex; align-items: center; gap: 10px; }
+.alert-arrow { font-size: .95rem; }
+.alert-row.up .alert-arrow, .alert-row.up .alert-pct { color: var(--bad); }
+.alert-row.down .alert-arrow, .alert-row.down .alert-pct { color: var(--good); }
+.alert-name { font-weight: 700; font-size: .82rem; }
+.alert-detail { font-size: .68rem; color: var(--text-dim); }
+.alert-side { display: flex; align-items: center; gap: 10px; }
+.alert-pct { font-weight: 800; font-size: .85rem; min-width: 54px; text-align: right; }
+.spark { opacity: .8; }
+.spark polyline { fill: none; stroke: var(--text-dim); stroke-width: 1.5; }
+.alert-row.up .spark polyline { stroke: var(--bad); }
+.alert-row.down .spark polyline { stroke: var(--good); }
+
+/* ---------- Heatmap semanal ---------- */
+.heatmap { border-collapse: separate; border-spacing: 2px; width: 100%; margin-top: 4px; }
+.heatmap th { font-size: .56rem; color: var(--text-dim); font-weight: 600; }
+.hm-cell { height: 16px; border-radius: 3px; cursor: pointer; opacity: .85; transition: opacity .1s, outline .1s; }
+.hm-cell:hover { opacity: 1; }
+.hm-cell.current { outline: 2px solid #fff; outline-offset: -1px; opacity: 1; }
+.barrios-list { font-size: .72rem; color: var(--text-dim); }
+
+.coverage-note {
+  margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+  background: var(--bg-soft); border: 1px solid var(--card-border);
+  font-size: .72rem; color: var(--text-dim);
+}
+.coverage-note strong { color: var(--good); }
+
+/* ---------- Impresión (reporte operativo) ---------- */
+@media print {
+  body { background: #fff; color: #111; }
+  .print-hide, .ops-actions, .footer a { display: none !important; }
+  .topbar { position: static; background: #fff; border-bottom: 2px solid #111; }
+  .topbar-meta, .section-sub, .card-sub { color: #444; }
+  .card { background: #fff; border: 1px solid #999; break-inside: avoid; }
+  .ops-grid { grid-template-columns: 1fr; }
+  .ops-table th, .ops-table td, .metric-table th, .metric-table td { border-bottom: 1px solid #ccc; color: #111; }
+  .alert-row { border-color: #999; }
+  .alert-name, .zone-cell, .section h2, .ops-grid h3, .metric-card h3 { color: #111; }
+  .method-grid p, .metric-sub { color: #333; }
+  .badge { border-color: #111; color: #111; background: #fff; }
+  .brand h1 { color: #111; }
+  .improvement.pos { color: #067647; }
+  .spark polyline { stroke: #555; }
+}
+
 /* ---------- Leaflet tweaks ---------- */
 .leaflet-container { font-family: inherit; }
 .leaflet-tooltip.barrio-tip {

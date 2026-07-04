@@ -1,12 +1,26 @@
 # Plan vivo — Arg-Security-Predictor
 
 > Este archivo es la fuente de verdad del estado del proyecto. Se actualiza en cada sesión de trabajo.
-> Última actualización: 2026-07-04
+> Última actualización: 2026-07-04 (v0.2)
 
-## Estado actual: MVP v0.1 funcionando ✅
+## Estado actual: v0.2 — plataforma operativa ✅
 
-Página estática con mapa de riesgo por barrio de CABA + dos modelos entrenados y evaluados
-honestamente contra baselines. Todo corre local y gratis (sin APIs pagas, sin servidores).
+Página estática con mapa de riesgo por **barrio y comuna**, filtro por tipo de delito,
+**alertas de cambio de patrón** (test de Poisson sobre las últimas 4 semanas de cada barrio),
+slot pico por zona con **export CSV** y reporte imprimible, forecast citywide con **banda de
+incertidumbre calibrada (CQR)** y feriados nacionales como feature. Todo corre local y gratis.
+
+### Qué se agregó en v0.2 (sobre el MVP v0.1)
+
+| Mejora | Detalle | Impacto medido |
+|---|---|---|
+| Feriados nacionales (feature) | Lista curada 2022–2026 en el modelo diario | MAE 40.4 → **33.6** (mejora total vs baseline: 31,2%) |
+| Contexto de barrio (feature) | Rolling 4 semanas del total del barrio en el modelo de slots | MAE 0.8658 → **0.8629** |
+| Banda de incertidumbre | Cuantiles q10/q90 + calibración conformal (CQR) en tramo separado | Cobertura real en test: 62,2% → **78,9%** (objetivo 80%) |
+| Alertas de cambio de patrón | z-score de Poisson, últimas 4 semanas vs 12 previas, umbral \|z\|≥2 | Módulo D del roadmap original, versión estadística explicable |
+| Vista por comuna | Agregación a las 15 comunas (unidad de las Comisarías Vecinales) | Uso operativo directo |
+| Filtro por tipo de delito | Descriptivo: mezcla histórica 12m por zona (documentado como tal) | Robo ≠ Hurto en estrategia de prevención |
+| Planificación operativa | Slot pico por zona, CSV de 2.016 slots, reporte imprimible | Lo que se lleva a una reunión de turnos |
 
 ## Decisiones tomadas (y por qué)
 
@@ -24,29 +38,34 @@ honestamente contra baselines. Todo corre local y gratis (sin APIs pagas, sin se
 
 | Modelo | Baseline | MAE baseline | MAE modelo | Mejora |
 |---|---|---|---|---|
-| Espacial (slot semanal) | Media histórica del slot | 0.898 | 0.866 | **−3.6%** |
-| Temporal (diario citywide) | Naive estacional t−7 | 48.81 | 40.38 | **−17.3%** |
+| Espacial (slot semanal) | Media histórica del slot | 0.898 | 0.863 | **−3.9%** |
+| Temporal (diario citywide) | Naive estacional t−7 | 48.81 | 33.57 | **−31.2%** |
+
+Banda q10–q90 del forecast: cobertura real en test **78,9%** (objetivo 80%) tras calibración CQR.
 
 Lectura honesta: en el modelo espacial la media histórica es un baseline muy fuerte (los patrones
-por barrio son estables); la ganancia viene de capturar tendencia y estacionalidad. En el diario
-la mejora es clara. Ambos números están publicados en la página.
+por barrio son estables); la ganancia viene de capturar tendencia, estacionalidad y contexto de
+barrio. En el diario la mejora es grande y los feriados explican casi la mitad. Todos los números
+están publicados en la página.
 
 ## Roadmap original → estado
 
 1. ~~Diccionario de datos unificado~~ → ✅ hecho para CABA (`src/prepare.py` + reporte de calidad)
-2. ~~EDA y mapas estáticos~~ → ✅ superado: mapa interactivo con selector día/franja
+2. ~~EDA y mapas estáticos~~ → ✅ superado: mapa interactivo barrio/comuna con filtros
 3. Modelo espacial (DBSCAN) y temporal (LSTM) → ⚠️ reemplazados por GBM Poisson (ver decisiones); DBSCAN de hotspots por coordenadas queda en backlog (los datos ya traen lat/lon limpias en `incidents_clean.csv`)
-4. ~~Scoring de riesgo~~ → ✅ índice 0–100 por barrio × día × franja
-5. ~~Dashboard~~ → ✅ `web/` (Leaflet + Chart.js, estático)
+4. ~~Scoring de riesgo~~ → ✅ índice 0–100 por barrio × día × franja + banda de incertidumbre calibrada
+5. ~~Dashboard~~ → ✅ `web/` (Leaflet + Chart.js, estático) con planificación operativa
+6. ~~Detección de anomalías (módulo D)~~ → ✅ v0.2: alertas por z-score de Poisson (más explicable que Isolation Forest para este caso; IF queda como upgrade posible)
 
 ## Backlog priorizado (siguiente sesión)
 
-- [ ] **Deploy**: GitHub Pages (gratis; `web/` ya es autocontenida)
+- [x] ~~Deploy GitHub Pages~~ → workflow en `.github/workflows/pages.yml`
+- [x] ~~Intervalos de predicción~~ → v0.2: CQR con cobertura medida
 - [ ] **DBSCAN hotspots**: clusters por lat/lon dentro de barrio, capa opcional en el mapa
-- [ ] **Variables exógenas**: clima histórico (Open-Meteo, gratis), feriados (`workalendar`), eventos
+- [ ] **Variables exógenas**: clima histórico (Open-Meteo, gratis), eventos masivos
 - [ ] **Pool de modelos** (idea original del proyecto): sumar Prophet/SARIMA al forecast diario y ensamblar; comparar en la tabla de métricas
-- [ ] **Intervalos de predicción** (cuantiles del GBM) en vez de punto único
-- [ ] **Automatizar refresh**: script que baje el CSV nuevo del año en curso y regenere todo
+- [ ] **Automatizar refresh**: script que baje el CSV nuevo del año en curso y regenere todo (cron o Action mensual)
+- [ ] **Backtesting de alertas**: medir precisión/recall de las alertas contra ventanas históricas
 - [ ] **Mendoza/Córdoba**: evaluar si existen datasets granulares equivalentes; si no, documentar por qué no se federó
 - [ ] **Paper/informe técnico** corto (formato notebook o PDF) para el CV
 

@@ -133,25 +133,36 @@ def main() -> None:
     daily = df.groupby("fecha")["cantidad"].sum().reset_index(name="n")
     daily.to_csv(OUT / "daily_city.csv", index=False)
 
-    # --- Perfil por barrio (para el panel de la web) ------------------------
+    # --- Perfil por barrio y por comuna (para el panel de la web) -----------
     # Se calcula sobre los ultimos 12 meses para reflejar composicion actual.
     cutoff = max_fecha - pd.Timedelta(days=365)
     recent = df[df["fecha"] >= cutoff]
+
+    def profile_of(g: pd.DataFrame) -> dict:
+        total = int(g["cantidad"].sum())
+        tipos = g.groupby("tipo")["cantidad"].sum().sort_values(ascending=False)
+        return {
+            "total_12m": total,
+            "top_tipos": [{"tipo": t, "pct": round(100 * v / total, 1)} for t, v in tipos.head(4).items()],
+            "tipo_share": {t: round(float(v) / total, 4) for t, v in tipos.items()},
+            "uso_arma_pct": round(100 * float((g["uso_arma"] == "SI").mul(g["cantidad"]).sum()) / total, 1),
+            "uso_moto_pct": round(100 * float((g["uso_moto"] == "SI").mul(g["cantidad"]).sum()) / total, 1),
+            "banda_dist": [int(x) for x in g.groupby("band")["cantidad"].sum().reindex(range(6), fill_value=0).values],
+        }
+
     profile: dict[str, dict] = {}
     for barrio, g in recent.groupby("barrio"):
-        total = int(g["cantidad"].sum())
-        tipos = (g.groupby("tipo")["cantidad"].sum().sort_values(ascending=False))
-        top_tipos = [{"tipo": t, "pct": round(100 * v / total, 1)} for t, v in tipos.head(4).items()]
-        bands = g.groupby("band")["cantidad"].sum().reindex(range(6), fill_value=0)
-        profile[barrio] = {
-            "comuna": int(pd.to_numeric(g["comuna"], errors="coerce").dropna().mode().iloc[0]) if g["comuna"].notna().any() else None,
-            "total_12m": total,
-            "top_tipos": top_tipos,
-            "uso_arma_pct": round(100 * float((g["uso_arma"] == "SI").mul(g["cantidad"]).sum()) / total, 1),
-            "banda_dist": [int(x) for x in bands.values],
-        }
+        p = profile_of(g)
+        p["comuna"] = (int(pd.to_numeric(g["comuna"], errors="coerce").dropna().mode().iloc[0])
+                       if g["comuna"].notna().any() else None)
+        profile[barrio] = p
     (OUT / "barrio_profile.json").write_text(json.dumps(profile, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"  perfiles de barrio: {len(profile)}")
+
+    recent_c = recent.assign(comuna_n=pd.to_numeric(recent["comuna"], errors="coerce"))
+    comuna_profile = {str(int(c)): profile_of(g) for c, g in recent_c.dropna(subset=["comuna_n"]).groupby("comuna_n")}
+    (OUT / "comuna_profile.json").write_text(json.dumps(comuna_profile, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"  perfiles de comuna: {len(comuna_profile)}")
 
     # --- GeoJSON de barrios -------------------------------------------------
     gj = json.loads((RAW / "barrios.geojson").read_text(encoding="utf-8"))
@@ -190,6 +201,30 @@ def main() -> None:
     (WEB_DATA / "barrios.geojson").write_text(
         json.dumps({"type": "FeatureCollection", "features": out_features}, ensure_ascii=False),
         encoding="utf-8")
+
+    # --- GeoJSON de comunas ---------------------------------------------------
+    cj = json.loads((RAW / "comunas.geojson").read_text(encoding="utf-8"))
+    comuna_features = []
+    for feat in cj["features"]:
+        props = feat["properties"]
+        geom = feat["geometry"]
+        if geom["type"] == "Polygon":
+            area = polygon_area_km2(geom["coordinates"])
+        else:
+            area = sum(polygon_area_km2(p) for p in geom["coordinates"])
+        area_prop = pd.to_numeric(props.get("area"), errors="coerce")
+        if area_prop and not pd.isna(area_prop) and area_prop > 1000:
+            area = float(area_prop) / 1e6
+        comuna_features.append({
+            "type": "Feature",
+            "properties": {"comuna": int(props["comuna"]), "barrios": props.get("barrios", ""),
+                           "area_km2": round(area, 2)},
+            "geometry": geom,
+        })
+    (WEB_DATA / "comunas.geojson").write_text(
+        json.dumps({"type": "FeatureCollection", "features": comuna_features}, ensure_ascii=False),
+        encoding="utf-8")
+    print(f"  comunas geojson: {len(comuna_features)} features")
 
     # --- Cruce de nombres CSV vs geojson -------------------------------------
     csv_names = set(df["barrio"].unique())

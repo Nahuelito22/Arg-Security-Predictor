@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BA Crime Predictor — Riesgo delictivo por barrio (CABA)</title>
-  <meta name="description" content="MVP de predicción de incidentes delictivos por barrio, día y franja horaria en la Ciudad de Buenos Aires. Datos abiertos 2022–2025.">
+  <title>BA Crime Predictor — Riesgo delictivo por barrio y comuna (CABA)</title>
+  <meta name="description" content="Plataforma de análisis y predicción de incidentes delictivos por barrio, comuna, día y franja horaria en la Ciudad de Buenos Aires. Datos abiertos 2022–2025, modelos evaluados contra baseline, alertas de cambio de patrón.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -16,12 +16,12 @@
   <div class="brand">
     <span class="brand-dot"></span>
     <h1>BA Crime Predictor</h1>
-    <span class="badge">MVP</span>
+    <span class="badge">v0.2</span>
   </div>
   <div class="topbar-meta" id="topbar-meta">Cargando datos…</div>
 </header>
 
-<main class="layout">
+<main class="layout print-hide">
   <section class="map-wrap">
     <div id="map"></div>
     <div class="map-overlay selection-pill" id="selection-pill"></div>
@@ -34,35 +34,79 @@
 
   <aside class="panel">
     <div class="card controls">
+      <div class="control-label">Vista</div>
+      <div class="btn-row" id="vista-buttons">
+        <button data-vista="barrios" class="active">Barrios</button>
+        <button data-vista="comunas">Comunas</button>
+      </div>
       <div class="control-label">Día de la semana</div>
       <div class="btn-row" id="dow-buttons"></div>
       <div class="control-label">Franja horaria</div>
       <div class="btn-row" id="band-buttons"></div>
+      <div class="control-label">Tipo de delito</div>
+      <div class="btn-row chips" id="tipo-buttons"></div>
       <label class="toggle">
         <input type="checkbox" id="normalize" checked>
         <span>Normalizar por km² (densidad de riesgo)</span>
       </label>
+      <div class="control-label">Ir a zona</div>
+      <select id="zone-select"><option value="">Elegir…</option></select>
     </div>
 
-    <div class="card detail" id="barrio-detail">
+    <div class="card detail" id="zone-detail">
       <div class="detail-empty">
         <div class="detail-empty-icon">🗺️</div>
-        <p>Hacé clic en un barrio del mapa para ver su detalle: incidentes esperados, índice de riesgo, tipos de delito predominantes y distribución horaria.</p>
+        <p>Hacé clic en una zona del mapa (o elegila arriba) para ver su detalle: incidentes esperados, índice de riesgo, huella semanal, tipos de delito y distribución horaria.</p>
       </div>
     </div>
   </aside>
 </main>
 
-<section class="section">
+<section class="section" id="ops-section">
+  <div class="section-head">
+    <div>
+      <h2>Planificación operativa</h2>
+      <p class="section-sub">Los slots de mayor demanda esperada para la próxima semana y los cambios de patrón detectados — pensado para planificar turnos, despliegue y prevención por comisaría.</p>
+    </div>
+    <div class="ops-actions print-hide">
+      <button class="action-btn" id="csv-btn">⬇ Descargar CSV</button>
+      <button class="action-btn" id="print-btn">🖨 Imprimir reporte</button>
+    </div>
+  </div>
+  <div class="ops-grid">
+    <div class="card">
+      <h3 id="top-slots-title">Top 10 slots de la semana</h3>
+      <p class="card-sub" id="top-slots-sub"></p>
+      <table class="ops-table" id="top-slots-table"></table>
+    </div>
+    <div class="card">
+      <h3>⚠ Alertas de cambio de patrón</h3>
+      <p class="card-sub" id="alerts-sub"></p>
+      <div id="alerts-list"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section print-hide">
   <h2>Tendencia y pronóstico de la ciudad</h2>
-  <p class="section-sub">Incidentes diarios totales en CABA: últimos 60 días observados y pronóstico a 14 días del modelo de forecasting.</p>
+  <p class="section-sub">Incidentes diarios totales en CABA: últimos 60 días observados y pronóstico a 14 días con banda de incertidumbre calibrada (cobertura real medida en datos nunca vistos).</p>
   <div class="card chart-card"><canvas id="citywide-chart" height="90"></canvas></div>
 </section>
 
 <section class="section">
   <h2>¿Qué tan bueno es el modelo? <span class="muted">(evaluación honesta)</span></h2>
-  <p class="section-sub">Cada modelo se evalúa contra un baseline ingenuo con split temporal (el test son datos futuros que el modelo nunca vio). Si un modelo no supera al baseline, no sirve — acá están los números reales.</p>
+  <p class="section-sub">Cada modelo se evalúa contra un baseline ingenuo con split temporal (el test son datos futuros que el modelo nunca vio). Si un modelo no supera al baseline, no se publica — acá están los números reales.</p>
   <div class="metrics-grid" id="metrics-grid"></div>
+</section>
+
+<section class="section print-hide">
+  <h2>Casos de uso operativos</h2>
+  <div class="method-grid">
+    <div class="card"><h3>🚓 Turnos y despliegue</h3><p>El ranking de slots y el mapa por franja responden la pregunta operativa básica: <strong>¿dónde y cuándo conviene concentrar el recurso escaso?</strong> El esperado semanal por slot es una medida directa de demanda.</p></div>
+    <div class="card"><h3>🏢 Comisarías por comuna</h3><p>La vista por comuna coincide con la organización territorial de las Comisarías Vecinales de la Policía de la Ciudad: cada jefatura puede leer <strong>su</strong> demanda esperada y su composición de delitos.</p></div>
+    <div class="card"><h3>📡 Alerta temprana</h3><p>Las alertas de cambio de patrón detectan barrios cuya actividad reciente se desvía significativamente de su propio histórico — señal típica de una <strong>nueva modalidad o banda operando</strong>, antes de que se consolide.</p></div>
+    <div class="card"><h3>💡 Prevención situacional</h3><p>La huella semanal de cada barrio (qué franjas concentran el riesgo) orienta medidas no policiales: <strong>iluminación, presencia en transporte, intervención urbana</strong> — donde y cuando importan.</p></div>
+  </div>
 </section>
 
 <section class="section methodology">
@@ -74,21 +118,21 @@
     </div>
     <div class="card">
       <h3>🧠 Modelos</h3>
-      <p><strong>Modelo espacial:</strong> Gradient Boosting con pérdida de Poisson que predice el conteo semanal por slot (barrio × día × franja de 4h, grid de 2.016 slots con ceros explícitos), usando calendario, tendencia y lags. <strong>Modelo temporal:</strong> forecast diario citywide con lags y estacionalidad semanal/anual.</p>
+      <p><strong>Espacial:</strong> Gradient Boosting con pérdida de Poisson sobre el conteo semanal por slot (barrio × día × franja de 4h, 2.016 slots con ceros explícitos), con calendario, tendencia, lags y contexto del barrio. <strong>Temporal:</strong> forecast diario citywide con lags, estacionalidad y feriados nacionales; banda de incertidumbre por regresión cuantílica <strong>calibrada con conformal prediction</strong>. El filtro por tipo de delito es descriptivo (mezcla histórica del último año); la predicción es del total.</p>
     </div>
     <div class="card">
       <h3>📏 Evaluación</h3>
-      <p>Split estrictamente temporal: se entrena con el pasado y se evalúa en las últimas 26 semanas (espacial) y 90 días (temporal). Baselines: media histórica por slot y naive estacional. Métricas: MAE y RMSE, siempre comparadas contra el baseline.</p>
+      <p>Split estrictamente temporal: 26 semanas (espacial) y 90 días (temporal) finales como test. Baselines: media histórica por slot y naive estacional. Las <strong>alertas</strong> comparan las últimas 4 semanas de cada barrio contra sus 12 previas con un test de Poisson (|z| ≥ 2).</p>
     </div>
     <div class="card ethics">
       <h3>⚖️ Limitaciones y ética</h3>
-      <p>Los datos son <strong>denuncias registradas</strong>, no delitos reales: existe subregistro y sesgo de denuncia que varía por zona y tipo de delito. Las predicciones son agregadas a nivel barrio con fines de análisis y planificación; <strong>no</strong> son una herramienta de vigilancia ni perfilamiento individual. Un índice alto no define a un barrio ni a su gente.</p>
+      <p>Los datos son <strong>denuncias registradas</strong>, no delitos reales: existe subregistro y sesgo de denuncia que varía por zona y tipo. Las predicciones son agregadas a nivel barrio/comuna y sirven para <strong>planificación de recursos y prevención</strong> — no para vigilancia ni perfilamiento individual. Un índice alto describe un slot espacio-temporal, no define a un barrio ni a su gente. Uso operativo real requiere validación institucional.</p>
     </div>
   </div>
 </section>
 
 <footer class="footer">
-  <p>Proyecto educativo de portfolio — no es una herramienta operativa de seguridad.</p>
+  <p>Proyecto de portfolio con datos reales — demo, no herramienta operativa certificada.</p>
   <p>Fuente: <a href="https://data.buenosaires.gob.ar/dataset/delitos" target="_blank" rel="noopener">BA Data — Delitos (GCBA)</a> · Código: <a href="https://github.com/Nahuelito22/Arg-Security-Predictor" target="_blank" rel="noopener">GitHub</a> · Mapa © <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a> / OpenStreetMap</p>
 </footer>
 
