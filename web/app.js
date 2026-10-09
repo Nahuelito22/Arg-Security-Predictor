@@ -101,8 +101,10 @@ function tooltipHtml(key) {
 function initMap(geoB, geoC) {
   map = L.map("map", { zoomControl: true, attributionControl: false })
     .setView([-34.615, -58.445], 12);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 18, subdomains: "abcd",
+  // Mapa base: Esri "World Dark Gray" (sin API key). Los tiles reales llegan
+  // hasta el zoom 16; de ahí en adelante Leaflet agranda los del 16.
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 18, maxNativeZoom: 16,
   }).addTo(map);
   layers.barrios = makeLayer(geoB, "barrios");
   layers.comunas = makeLayer(geoC, "comunas");
